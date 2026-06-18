@@ -232,6 +232,23 @@ require_fix_exe() {
 }
 
 # --------------------------------------------------------------------------
+# Resolve the Wine binary inside a Proton dir.
+# New WoW64 Proton (9.0+ / Experimental) ships only "wine"; older Proton
+# shipped a separate "wine64".  Prefer wine64 when present, else fall back.
+# --------------------------------------------------------------------------
+resolve_wine() {
+    local proton_dir="$1"
+    local w
+    for w in "$proton_dir/files/bin/wine64" "$proton_dir/files/bin/wine"; do
+        if [[ -x "$w" ]]; then
+            echo "$w"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# --------------------------------------------------------------------------
 # --endcomp : Steam launch option — launches game alongside the helper
 # --------------------------------------------------------------------------
 cmd_endcomp() {
@@ -246,9 +263,9 @@ cmd_endcomp() {
         exec "$@"
     fi
 
-    local wine="$proton_dir/files/bin/wine64"
-    if [[ ! -x "$wine" ]]; then
-        echo "WARNING: wine64 not found at $wine"
+    local wine
+    if ! wine="$(resolve_wine "$proton_dir")"; then
+        echo "WARNING: no wine binary found in $proton_dir/files/bin (looked for wine64, wine)"
         echo "Launching game without helper."
         exec "$@"
     fi
@@ -301,9 +318,9 @@ cmd_run_helper() {
         exit 1
     fi
 
-    local wine="$proton_dir/files/bin/wine64"
-    if [[ ! -x "$wine" ]]; then
-        echo "wine64 not found: $wine"
+    local wine
+    if ! wine="$(resolve_wine "$proton_dir")"; then
+        echo "No wine binary found in $proton_dir/files/bin (looked for wine64, wine)"
         exit 1
     fi
 
